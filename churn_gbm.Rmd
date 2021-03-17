@@ -39,7 +39,8 @@ dt = merge(customers,indicators,by="ID_CLIENT")
 rm(customers,indicators)
 
 dt = dt[,-c("ID_CLIENT","NOM")]
-DT::datatable(head(dt,100)%>%sapply(sample))#on permute les données par colonne parce que la diffusion n'est pas autorisée. Ainsi on peut se faire une idée du contenu des colonnes sans révéler les données sous-jacentes.
+DT::datatable(head(dt,100)%>%sapply(sample),
+              rownames = FALSE, extensions = 'Buttons', options = list(dom = 'Bfrtip', buttons = I('colvis')))#on permute les données par colonne parce que la diffusion n'est pas autorisée. Ainsi on peut se faire une idée du contenu des colonnes sans révéler les données sous-jacentes.
 ```
 
 

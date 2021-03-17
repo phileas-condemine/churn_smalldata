@@ -8,6 +8,9 @@ navbar:
       href: index.html
     - text: "Analyse"
       href: churn_gbm.html
+  right:
+    - icon: fab fa-github
+      href: https://github.com/phileas-condemine/churn_smalldata/
 output:
   html_document:
     toc: true
