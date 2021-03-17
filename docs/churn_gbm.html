@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Philéas Condemine" />
+
+
+<title>Modélisation du Churn sur un petit échantillon par Gradient Boosting</title>
+
+<script src="site_libs/header-attrs-2.6/header-attrs.js"></script>
+<script src="site_libs/jquery-3.5.1/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<script src="site_libs/htmlwidgets-1.5.3/htmlwidgets.js"></script>
+<link href="site_libs/datatables-css-0.0.0/datatables-crosstalk.css" rel="stylesheet" />
+<script src="site_libs/datatables-binding-0.17/datatables.js"></script>
+<link href="site_libs/dt-core-1.10.20/css/jquery.dataTables.min.css" rel="stylesheet" />
+<link href="site_libs/dt-core-1.10.20/css/jquery.dataTables.extra.css" rel="stylesheet" />
+<script src="site_libs/dt-core-1.10.20/js/jquery.dataTables.min.js"></script>
+<link href="site_libs/crosstalk-1.1.1/css/crosstalk.css" rel="stylesheet" />
+<script src="site_libs/crosstalk-1.1.1/js/crosstalk.min.js"></script>
+<script src="site_libs/plotly-binding-4.9.3/plotly.js"></script>
+<script src="site_libs/typedarray-0.1/typedarray.min.js"></script>
+<link href="site_libs/plotly-htmlwidgets-css-1.57.1/plotly-htmlwidgets.css" rel="stylesheet" />
+<script src="site_libs/plotly-main-1.57.1/plotly-latest.min.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 51px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h2 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h3 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h4 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h5 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h6 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #ffffff;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Basic use of Gradient Boosting on a small sample of Bank Churn Data</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Accueil</a>
+</li>
+<li>
+  <a href="churn_gbm.html">Analyse</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Modélisation du Churn sur un petit échantillon par Gradient Boosting</h1>
+<h4 class="author">Philéas Condemine</h4>
+<h4 class="date">17/03/2021</h4>
+
+</div>
+
+
+<div id="chargement-des-packages" class="section level2">
+<h2>Chargement des packages</h2>
+<pre class="r"><code>library(data.table)
+library(gbm)
+library(caret)
+library(dplyr)
+library(MLmetrics)
+library(plotly)
+library(pdp)</code></pre>
+</div>
+<div id="lecture-des-données-et-consolidation" class="section level2">
+<h2>Lecture des données et consolidation</h2>
+<pre class="r"><code>customers = fread(&quot;data/customers.csv&quot;,encoding = &quot;UTF-8&quot;)
+indicators = fread(&quot;data/indicators.csv&quot;,encoding = &quot;UTF-8&quot;)
+
+uniqueN(indicators$ID_CLIENT)#On a 9950 individus avec 1 individu par ligne.</code></pre>
+<pre><code>## [1] 9950</code></pre>
+<pre class="r"><code>uniqueN(customers$ID_CLIENT)</code></pre>
+<pre><code>## [1] 9950</code></pre>
+<pre class="r"><code>dt = merge(customers,indicators,by=&quot;ID_CLIENT&quot;)
+rm(customers,indicators)
+
+dt = dt[,-c(&quot;ID_CLIENT&quot;,&quot;NOM&quot;)]
+DT::datatable(head(dt,100)%&gt;%sapply(sample))#on permute les données par colonne parce que la diffusion n&#39;est pas autorisée. Ainsi on peut se faire une idée du contenu des colonnes sans révéler les données sous-jacentes.</code></pre>
+<div id="htmlwidget-e198f63661c8f0025b3b" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-e198f63661c8f0025b3b">{"x":{"filter":"none","data":[["2017-01-01 00:00:00","2019-04-01 00:00:00","2011-01-01 00:00:00","2012-06-01 00:00:00","2013-02-01 00:00:00","2012-02-01 00:00:00","2011-06-01 00:00:00","2017-01-01 00:00:00","2017-04-01 00:00:00","2020-03-01 00:00:00","2016-03-01 00:00:00","2013-01-01 00:00:00","2018-03-01 00:00:00","2018-04-01 00:00:00","2015-06-01 00:00:00","2015-04-01 00:00:00","2014-04-01 00:00:00","2016-06-01 00:00:00","2011-04-01 00:00:00","2014-04-01 00:00:00","2016-05-01 00:00:00","2020-05-01 00:00:00","2011-04-01 00:00:00","2013-02-01 00:00:00","2015-06-01 00:00:00","2017-01-01 00:00:00","2012-02-01 00:00:00","2012-05-01 00:00:00","2013-04-01 00:00:00","2018-01-01 00:00:00","2012-01-01 00:00:00","2014-06-01 00:00:00","2017-03-01 00:00:00","2010-02-01 00:00:00","2015-06-01 00:00:00","2016-05-01 00:00:00","2011-04-01 00:00:00","2011-02-01 00:00:00","2010-04-01 00:00:00","2017-05-01 00:00:00","2018-03-01 00:00:00","2015-01-01 00:00:00","2010-01-01 00:00:00","2013-04-01 00:00:00","2017-02-01 00:00:00","2013-06-01 00:00:00","2011-01-01 00:00:00","2015-06-01 00:00:00","2015-01-01 00:00:00","2018-04-01 00:00:00","2013-05-01 00:00:00","2013-02-01 00:00:00","2012-01-01 00:00:00","2013-02-01 00:00:00","2017-02-01 00:00:00","2019-04-01 00:00:00","2020-01-01 00:00:00","2020-04-01 00:00:00","2016-05-01 00:00:00","2019-01-01 00:00:00","2011-04-01 00:00:00","2013-05-01 00:00:00","2019-01-01 00:00:00","2015-06-01 00:00:00","2019-06-01 00:00:00","2017-03-01 00:00:00","2018-03-01 00:00:00","2019-02-01 00:00:00","2017-02-01 00:00:00","2015-01-01 00:00:00","2018-01-01 00:00:00","2014-01-01 00:00:00","2011-03-01 00:00:00","2014-05-01 00:00:00","2016-01-01 00:00:00","2012-06-01 00:00:00","2012-06-01 00:00:00","2015-06-01 00:00:00","2016-06-01 00:00:00","2011-01-01 00:00:00","2011-06-01 00:00:00","2017-04-01 00:00:00","2012-01-01 00:00:00","2014-06-01 00:00:00","2018-04-01 00:00:00","2012-01-01 00:00:00","2012-01-01 00:00:00","2012-02-01 00:00:00","2014-03-01 00:00:00","2013-06-01 00:00:00","2016-05-01 00:00:00","2010-06-01 00:00:00","2014-04-01 00:00:00","2019-04-01 00:00:00","2014-04-01 00:00:00","2013-01-01 00:00:00","2010-03-01 00:00:00","2013-03-01 00:00:00","2019-01-01 00:00:00","2018-04-01 00:00:00"],["Espagne","France","Allemagne","France","France","Espagne","France","France","France","France","France","France","Espagne","Allemagne","France","Allemagne","France","Allemagne","Espagne","Allemagne","France","France","Espagne","Espagne","France","France","Espagne","France","Allemagne","Allemagne","Espagne","Espagne","France","Espagne","Espagne","France","France","Espagne","France","Allemagne","France","Espagne","Allemagne","Allemagne","Espagne","France","France","France","Allemagne","Allemagne","France","Allemagne","France","France","France","France","Espagne","Allemagne","Espagne","Espagne","Allemagne","Allemagne","France","Allemagne","Allemagne","France","Allemagne","Allemagne","France","Espagne","Espagne","Allemagne","Allemagne","France","Espagne","Espagne","Allemagne","France","France","France","Espagne","Allemagne","Espagne","France","Allemagne","France","France","Espagne","Espagne","France","France","Allemagne","Espagne","France","Allemagne","France","Allemagne","Allemagne","France","Allemagne"],["F","F","H","F","H","H","H","F","H","H","F","F","F","F","F","H","F","F","F","F","F","H","H","H","F","F","H","F","F","H","F","F","H","H","H","F","F","H","H","H","H","H","H","F","H","H","H","F","H","F","F","F","H","F","H","H","H","F","H","H","F","F","F","F","F","F","H","F","F","H","H","H","F","H","F","H","H","F","F","H","H","H","H","H","H","H","F","F","F","F","F","H","H","H","F","H","F","H","H","H"],["29","30","44","38","27","41","55","41","24","46","30","32","31","44","40","29","39","43","38","44","75","51","42","42","34","36","33","30","44","39","28","41","37","43","66","46","39","54","28","42","48","40","33","22","33","35","53","25","20","31","26","41","44","24","36","37","45","48","73","41","31","23","32","42","27","23","34","44","35","49","41","31","30","28","37","35","44","38","42","45","33","38","45","135","40","39","64","20","34","46","51","39","30","33","47","46","37","32","39","44"],["Yes","No","Yes","Yes","Yes","Yes","Yes","No","No","Yes","Yes","No","Yes","No","No","Yes","Yes","Yes","No","Yes","No","No","Yes","Yes","No","Yes","No","No","Yes","No","No","Yes","No","No","Yes","Yes","Yes","No","Yes","Yes","No","Yes","Yes","No","No","No","No","No","Yes","No","No","Yes","No","No","Yes","No","Yes","Yes","No","Yes","No","No","No","No","Yes","Yes","Yes","Yes","Yes","Yes","Yes","No","Yes","Yes","Yes","Yes","Yes","Yes","Yes","No","No","Yes","No","No","No","Yes","No","Yes","No","No","Yes","Yes","Yes","Yes","No","No","Yes","Yes","Yes","Yes"],["81710.46","0","52016.08","129387.94","114940.67","83739.32","0","161993.89","0","0","80542.81","155059.1","108913.84","114631.23","0","114354.95","127320.36","66948.67","144880.34","138171.1","53573.18","144164.29","177997.07","124213.36","0","57809.32","134874.4","71497.79","96652.86","0","0","105918.1","0","88046.88","100727.5","0","100275.88","88594.93","0","141535.52","111574.41","0","0","66201.96","0","0","133636.16","0","119278.01","145578.28","0","0","0","0","124616.23","132725.1","144027.8","163714.52","69609.85","143391.07","137851.31","0","0","0","134766.85","118894.22","129991.76","98009.13","0","0","167735.69","0","0","96048.55","77168.87","0","139840.36","167557.12","103560.57","143006.7","64430.06","0","0","71379.53","0","0","137817.52","0","138053.79","102630.13","0","0","0","123040.38","106434.94","189318.16","0","0","128243.03","109558.36"],["2","1","2","4","1","2","1","1","2","1","1","1","2","2","1","2","1","2","2","1","15","2","1","1","1","1","1","1","2","3","2","2","1","2","2","1","1","1","2","2","1","1","2","2","1","3","1","1","1","2","1","1","1","2","2","1","2","1","1","2","1","1","1","2","1","2","1","1","2","1","2","1","2","1","2","1","2","2","1","2","2","1","1","1","2","2","1","2","2","1","2","2","2","2","2","3","2","2","2","2"],["No","Yes","Yes","Yes","Yes","Yes","Yes","Yes","Yes","Yes","Yes","Yes","Yes","Yes","Yes","Yes","Yes","No","Yes","No","Yes","Yes","Yes","Yes","Yes","No","Yes","Yes","Yes","Yes","Yes","Yes","Yes","No","No","Yes","Yes","Yes","Yes","Yes","No","No","Yes","No","Yes","No","Yes","Yes","Yes","No","No","No","Yes","Yes","No","Yes","Yes","Yes","Yes","No","Yes","Yes","No","No","Yes","Yes","No","Yes","Yes","Yes","Yes","Yes","Yes","Yes","Yes","No","Yes","No","Yes","Yes","No","Yes","Yes","No","Yes","Yes","No","Yes","No","Yes","Yes","Yes","Yes","No","Yes","No","Yes","Yes","No","No"],["147955.91","90212.38","30804.68","74510.65","236.45","6123.15","56185.98","39382.06","66393.89","56214.09","41183.02","137995.66","69320.97","116747.62","5008.23","197963.46","188203.58","94739.2","151083.8","83256.26","107124.17","154639.72","98686.4","148779.41","96517.97","164549.74","154000.99","146700.22","30838.51","15650.89","120250.58","175643.44","163524.7","19370.73","45026.23","30583.95","148798.45","1276.87","50595.15","178997.89","188258.49","72993.65","48963.59","103315.74","46041.08","186172.85","161653.5","47307.9","81908.09","140460.01","16246.59","140857.76","129590.18","144584.29","71709.12","31384.86","96123.72","77475.73",null,"72127.83","88729.22","62830.97","163170.32",null,"104665.79","108731.02","113469.65","27862.58","183515.13","83997.79","114283.33","162697.93","11631.34","34948.77","190040.29","158646.46","170333.38","175480.93","116520.07","19233.41","118825.56","122604.44","149665.65","127433.47","146891.07","79355.87","2923.61","51711.57","79458.12","194895.57","140759.03","62627.55","186942.49","35600.25","81602.02","101039.53","91429.74","54018.93","189016.24","76503.06"],["745","492","758","656","501","690","678","779","734",null,"612","584","773","545","630","653","637","793","749","497","444","450","481","670","586","527","601","581","766","580","667","586","487","618","550","646",null,"623","809","738","548","738","633","634","749","681","488","631","587","573","634","698","709","698","683","709","430","633","515","616","735","556",null,"660","704","828","656","802",null,"650","757","789",null,"569","712","554","532","596","592","777","689","598","850","537","559","653","508","719","574","712","661","573","535","739","761","787","794","601","684","627"],["No","No","No","No","No","No","No","No","No","Yes","No","No","No","No","Yes","Yes","No","No","Yes","No","No","No","Yes","No","No","No","No","No","No","No","No","No","No","No","No","No","No","Yes","No","Yes","No","No","No","Yes","No","No","No","Yes","No","No","No","No","Yes","No","No","No","No","No","Yes","No","No","No","No","No","No","Yes","Yes","No","No","No","No","Yes","No","No","Yes","No","No","No","No","No","Yes","No","No","No","No","No","No","Yes","No","No","No","Yes","No","No","No","No","No","No","Yes","No"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>DATE_ENTREE<\/th>\n      <th>PAYS<\/th>\n      <th>SEXE<\/th>\n      <th>AGE<\/th>\n      <th>MEMBRE_ACTIF<\/th>\n      <th>BALANCE<\/th>\n      <th>NB_PRODUITS<\/th>\n      <th>CARTE_CREDIT<\/th>\n      <th>SALAIRE<\/th>\n      <th>SCORE_CREDIT<\/th>\n      <th>CHURN<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+</div>
+<div id="data-prep-basique" class="section level2">
+<h2>Data-prep basique</h2>
+<pre class="r"><code>dt[,DATE_ENTREE:=as.Date(DATE_ENTREE)]
+{ggplot(data=dt)+geom_bar(aes(x=year(DATE_ENTREE)))}%&gt;%ggplotly</code></pre>
+<div id="htmlwidget-ba6144fd171f2a1e6150" style="width:672px;height:480px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="htmlwidget-ba6144fd171f2a1e6150">{"x":{"data":[{"orientation":"v","width":[0.900000000000091,0.900000000000091,0.900000000000091,0.900000000000091,0.900000000000091,0.900000000000091,0.900000000000091,0.900000000000091,0.900000000000091,0.900000000000091,0.900000000000091],"base":[0,0,0,0,0,0,0,0,0,0,0],"x":[2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020],"y":[488,978,1017,1023,964,1008,986,1006,1039,1030,411],"text":["count:  488<br />year(DATE_ENTREE): 2010","count:  978<br />year(DATE_ENTREE): 2011","count: 1017<br />year(DATE_ENTREE): 2012","count: 1023<br />year(DATE_ENTREE): 2013","count:  964<br />year(DATE_ENTREE): 2014","count: 1008<br />year(DATE_ENTREE): 2015","count:  986<br />year(DATE_ENTREE): 2016","count: 1006<br />year(DATE_ENTREE): 2017","count: 1039<br />year(DATE_ENTREE): 2018","count: 1030<br />year(DATE_ENTREE): 2019","count:  411<br />year(DATE_ENTREE): 2020"],"type":"bar","marker":{"autocolorscale":false,"color":"rgba(89,89,89,1)","line":{"width":1.88976377952756,"color":"transparent"}},"showlegend":false,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null}],"layout":{"margin":{"t":26.2283105022831,"r":7.30593607305936,"b":40.1826484018265,"l":48.9497716894977},"plot_bgcolor":"rgba(235,235,235,1)","paper_bgcolor":"rgba(255,255,255,1)","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187},"xaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[2009.005,2020.995],"tickmode":"array","ticktext":["2010.0","2012.5","2015.0","2017.5","2020.0"],"tickvals":[2010,2012.5,2015,2017.5,2020],"categoryorder":"array","categoryarray":["2010.0","2012.5","2015.0","2017.5","2020.0"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(255,255,255,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"y","title":{"text":"year(DATE_ENTREE)","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"yaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[-51.95,1090.95],"tickmode":"array","ticktext":["0","250","500","750","1000"],"tickvals":[0,250,500,750,1000],"categoryorder":"array","categoryarray":["0","250","500","750","1000"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(255,255,255,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"x","title":{"text":"count","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"shapes":[{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0,"x1":1,"y0":0,"y1":1}],"showlegend":false,"legend":{"bgcolor":"rgba(255,255,255,1)","bordercolor":"transparent","borderwidth":1.88976377952756,"font":{"color":"rgba(0,0,0,1)","family":"","size":11.689497716895}},"hovermode":"closest","barmode":"relative"},"config":{"doubleClick":"reset","showSendToCloud":false},"source":"A","attrs":{"42ac4cac568c":{"x":{},"type":"bar"}},"cur_data":"42ac4cac568c","visdat":{"42ac4cac568c":["function (y) ","x"]},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+<pre class="r"><code>dt[,age_produit:=as.numeric(Sys.Date() - DATE_ENTREE)]
+
+dt = dt[,-c(&quot;DATE_ENTREE&quot;)]
+dt[,id:=1:nrow(dt)]
+dt[,group:=sample(1:10,replace=T,nrow(dt))]
+dt[,CHURN:=ifelse(CHURN==&quot;Yes&quot;,1,0)]
+dt = dt%&gt;%mutate_if(is.character,factor)%&gt;%data.table
+#vars not needed in the model
+useless = c(&quot;id&quot;,&quot;group&quot;)</code></pre>
+</div>
+<div id="anticipation-définition-des-variables-ayant-un-effet-monotone" class="section level2">
+<h2>Anticipation : définition des variables ayant un effet monotone</h2>
+<p>On verra après avoir lancé le modèle, en affichant les courbes de dépendance partielle que l’effet salaire est faible et instable avec un risque d’overfitting, ça se passe mieux si on met une contrainte de croissance.</p>
+<pre class="r"><code>vars = names(dt)
+vars = setdiff(vars,&quot;CHURN&quot;)
+vars = setdiff(vars,useless)
+monotony = setNames(rep(0,length(vars)),vars)
+monotony[&#39;SALAIRE&#39;]=1
+monotony</code></pre>
+<pre><code>##         PAYS         SEXE          AGE MEMBRE_ACTIF 
+##            0            0            0            0 
+##      BALANCE  NB_PRODUITS CARTE_CREDIT      SALAIRE 
+##            0            0            0            1 
+## SCORE_CREDIT  age_produit 
+##            0            0</code></pre>
+</div>
+<div id="fonction-pour-lancer-le-modèle-sur-un-échantillon-90-10" class="section level2">
+<h2>Fonction pour lancer le modèle sur un échantillon 90-10</h2>
+<pre class="r"><code>run_model_one_fold_and_predict = function(my_group,params,monotony){
+  train = dt[!group %in% my_group]
+  test = dt[group %in% my_group]
+  
+  model = gbm(data = train[,-useless,with=F],CHURN~.,
+              distribution = &quot;bernoulli&quot;,
+              var.monotone = monotony,
+              n.trees = params[&#39;ntrees&#39;],verbose = F,
+              train.fraction = .7,
+              interaction.depth = params[&quot;depth&quot;],
+              n.minobsinnode = params[&quot;nobs_in_node&quot;],
+              shrinkage = params[&#39;shrinkage&#39;]
+  )
+  best.iter &lt;- suppressMessages({gbm.perf(model, method = &quot;OOB&quot;,plot.it = F,oobag.curve = F,overlay = F)})
+  # print(as.numeric(best.iter))
+  pred = predict(model,test,type=&quot;response&quot;,n.trees = best.iter)
+  quantile(pred,0:10/10)
+  q80 = quantile(pred,.8)%&gt;%unname
+  test$pred_prob = pred
+  test$pred_val = 1*(pred &gt; q80)
+  
+  test
+}</code></pre>
+</div>
+<div id="fonction-pour-lancer-10-modèles-et-calculer-les-métriques" class="section level2">
+<h2>Fonction pour lancer 10 modèles et calculer les métriques</h2>
+<pre class="r"><code>run_model_and_evaluate = function(params,monotony){
+  res = lapply(1:10,run_model_one_fold_and_predict,params=params,monotony=monotony)
+  res = rbindlist(res)
+  precision = Precision(y_pred = res$pred_val,y_true = res$CHURN)
+  acc = Accuracy(y_pred = res$pred_val,y_true = res$CHURN)
+  recall = Recall(y_pred = res$pred_val,y_true = res$CHURN)
+  auroc = MLmetrics::AUC(y_pred = res$pred_prob,y_true = res$CHURN)
+  c(params,&quot;precision&quot;=precision,&quot;recall&quot;=recall,&quot;acc&quot;=acc,&quot;auroc&quot;=auroc)
+}</code></pre>
+</div>
+<div id="quelques-jeux-de-paramètres" class="section level2">
+<h2>Quelques jeux de paramètres</h2>
+<div id="sans-contrainte-de-monotonie" class="section level3">
+<h3>Sans contrainte de monotonie</h3>
+<pre class="r"><code>monotony[&#39;SALAIRE&#39;]=0
+params = c(&quot;depth&quot;=1,&quot;nobs_in_node&quot;=20,&quot;shrinkage&quot;=.1,&quot;ntrees&quot;=200)
+run_model_and_evaluate(params,monotony)</code></pre>
+<pre><code>##        depth nobs_in_node    shrinkage       ntrees 
+##    1.0000000   20.0000000    0.1000000  200.0000000 
+##    precision       recall          acc        auroc 
+##    0.8953386    0.8994068    0.8361809    0.8446387</code></pre>
+</div>
+<div id="effet-croissant-du-salaire" class="section level3">
+<h3>Effet croissant du salaire</h3>
+<pre class="r"><code>monotony[&#39;SALAIRE&#39;]=1
+params = c(&quot;depth&quot;=1,&quot;nobs_in_node&quot;=20,&quot;shrinkage&quot;=.1,&quot;ntrees&quot;=200)
+run_model_and_evaluate(params,monotony)</code></pre>
+<pre><code>##        depth nobs_in_node    shrinkage       ntrees 
+##    1.0000000   20.0000000    0.1000000  200.0000000 
+##    precision       recall          acc        auroc 
+##    0.8947104    0.8987757    0.8351759    0.8452293</code></pre>
+</div>
+<div id="profondeur-2" class="section level3">
+<h3>Profondeur 2</h3>
+<pre class="r"><code>params = c(&quot;depth&quot;=2,&quot;nobs_in_node&quot;=10,&quot;shrinkage&quot;=.1,&quot;ntrees&quot;=200)
+run_model_and_evaluate(params,monotony)</code></pre>
+<pre><code>##        depth nobs_in_node    shrinkage       ntrees 
+##    2.0000000   10.0000000    0.1000000  200.0000000 
+##    precision       recall          acc        auroc 
+##    0.9012439    0.9053389    0.8456281    0.8588759</code></pre>
+</div>
+<div id="profondeur-4" class="section level3">
+<h3>Profondeur 4</h3>
+<pre class="r"><code>params = c(&quot;depth&quot;=4,&quot;nobs_in_node&quot;=10,&quot;shrinkage&quot;=.1,&quot;ntrees&quot;=200)
+run_model_and_evaluate(params,monotony)</code></pre>
+<pre><code>##        depth nobs_in_node    shrinkage       ntrees 
+##    4.0000000   10.0000000    0.1000000  200.0000000 
+##    precision       recall          acc        auroc 
+##    0.9026260    0.9067272    0.8478392    0.8604187</code></pre>
+</div>
+</div>
+<div id="interprétation" class="section level2">
+<h2>Interprétation</h2>
+<div id="modèle-sur-toutes-les-données" class="section level3">
+<h3>Modèle sur toutes les données</h3>
+<pre class="r"><code>params = c(&quot;depth&quot;=1,&quot;nobs_in_node&quot;=20,&quot;shrinkage&quot;=.1,&quot;ntrees&quot;=200)
+useless = c(&quot;id&quot;,&quot;group&quot;)
+train = dt[,-useless,with=F]
+
+
+model = gbm(data = train,CHURN~.,
+            distribution = &quot;bernoulli&quot;,
+            var.monotone = monotony,
+            n.trees = params[&#39;ntrees&#39;],verbose = F,
+            train.fraction = .7,
+            interaction.depth = params[&quot;depth&quot;],
+            n.minobsinnode = params[&quot;nobs_in_node&quot;],
+            shrinkage = params[&#39;shrinkage&#39;]
+)
+best.iter &lt;- suppressMessages({gbm.perf(model, method = &quot;OOB&quot;,plot.it = F,oobag.curve = F,overlay = F)})
+# best.iter</code></pre>
+</div>
+<div id="importance-des-variables" class="section level3">
+<h3>Importance des variables</h3>
+<pre class="r"><code>summary(model)</code></pre>
+<p><img src="churn_gbm_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<pre><code>##                       var   rel.inf
+## AGE                   AGE 44.757422
+## NB_PRODUITS   NB_PRODUITS 31.918020
+## MEMBRE_ACTIF MEMBRE_ACTIF  7.613653
+## PAYS                 PAYS  7.406985
+## SEXE                 SEXE  2.722466
+## BALANCE           BALANCE  1.958527
+## SALAIRE           SALAIRE  1.822279
+## SCORE_CREDIT SCORE_CREDIT  1.546104
+## age_produit   age_produit  0.254543
+## CARTE_CREDIT CARTE_CREDIT  0.000000</code></pre>
+</div>
+</div>
+<div id="dépendances-partielles" class="section level2">
+<h2>Dépendances partielles</h2>
+<p>L’examen des dépendances partielles est utile pour évaluer visuellement des risques d’overfitting.</p>
+<div id="variables-numériques" class="section level3">
+<h3>Variables numériques</h3>
+<pre class="r"><code>pdply = function(varname){
+  pdp &lt;- suppressWarnings({partial(model,varname,n.trees = best.iter,plot = T,plot.engine = &quot;ggplot2&quot;)})
+  pdp %&gt;% ggplotly
+}
+
+
+pdply(&quot;AGE&quot;)</code></pre>
+<pre><code>## Warning: Use of `object[[1L]]` is discouraged. Use
+## `.data[[1L]]` instead.</code></pre>
+<pre><code>## Warning: Use of `object[[&quot;yhat&quot;]]` is discouraged. Use
+## `.data[[&quot;yhat&quot;]]` instead.</code></pre>
+<div id="htmlwidget-f0bda5cfc4ec951c1d4b" style="width:672px;height:480px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="htmlwidget-f0bda5cfc4ec951c1d4b">{"x":{"data":[{"x":[18,20,23,26,29,32,35,38,41,44,47,50,53,56,59,62,65,68,71,74,77,80,83,86,89,92,94,97,100,103,106,109,112,115,118,121,124,127,130,133,136,139,142,145,148,151,154,157,160,163,166],"y":[-1.20808182432533,-1.20808182432533,-1.20808182432533,-1.20808182432533,-1.20808182432533,-1.20808182432533,-1.08737433138153,-1.02595400420097,-0.871715242534985,-0.534111167399033,-0.215692785816647,-0.0840752036137351,-0.0684660792441801,-0.0684660792441801,-0.0684660792441801,-0.198564127484117,-0.448508083606038,-0.547407521979363,-0.613136806196276,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784,-1.10150957724784],"text":["object[[1L]]:  18<br />object[[\"yhat\"]]: -1.20808182","object[[1L]]:  20<br />object[[\"yhat\"]]: -1.20808182","object[[1L]]:  23<br />object[[\"yhat\"]]: -1.20808182","object[[1L]]:  26<br />object[[\"yhat\"]]: -1.20808182","object[[1L]]:  29<br />object[[\"yhat\"]]: -1.20808182","object[[1L]]:  32<br />object[[\"yhat\"]]: -1.20808182","object[[1L]]:  35<br />object[[\"yhat\"]]: -1.08737433","object[[1L]]:  38<br />object[[\"yhat\"]]: -1.02595400","object[[1L]]:  41<br />object[[\"yhat\"]]: -0.87171524","object[[1L]]:  44<br />object[[\"yhat\"]]: -0.53411117","object[[1L]]:  47<br />object[[\"yhat\"]]: -0.21569279","object[[1L]]:  50<br />object[[\"yhat\"]]: -0.08407520","object[[1L]]:  53<br />object[[\"yhat\"]]: -0.06846608","object[[1L]]:  56<br />object[[\"yhat\"]]: -0.06846608","object[[1L]]:  59<br />object[[\"yhat\"]]: -0.06846608","object[[1L]]:  62<br />object[[\"yhat\"]]: -0.19856413","object[[1L]]:  65<br />object[[\"yhat\"]]: -0.44850808","object[[1L]]:  68<br />object[[\"yhat\"]]: -0.54740752","object[[1L]]:  71<br />object[[\"yhat\"]]: -0.61313681","object[[1L]]:  74<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]:  77<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]:  80<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]:  83<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]:  86<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]:  89<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]:  92<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]:  94<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]:  97<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 100<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 103<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 106<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 109<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 112<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 115<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 118<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 121<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 124<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 127<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 130<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 133<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 136<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 139<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 142<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 145<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 148<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 151<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 154<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 157<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 160<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 163<br />object[[\"yhat\"]]: -1.10150958","object[[1L]]: 166<br />object[[\"yhat\"]]: -1.10150958"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(0,0,0,1)","dash":"solid"},"hoveron":"points","showlegend":false,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null}],"layout":{"margin":{"t":26.2283105022831,"r":7.30593607305936,"b":40.1826484018265,"l":54.7945205479452},"plot_bgcolor":"rgba(235,235,235,1)","paper_bgcolor":"rgba(255,255,255,1)","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187},"xaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[10.6,173.4],"tickmode":"array","ticktext":["40","80","120","160"],"tickvals":[40,80,120,160],"categoryorder":"array","categoryarray":["40","80","120","160"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(255,255,255,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"y","title":{"text":"AGE","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"yaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[-1.26506261157939,-0.0114852919901227],"tickmode":"array","ticktext":["-1.25","-1.00","-0.75","-0.50","-0.25"],"tickvals":[-1.25,-1,-0.75,-0.5,-0.25],"categoryorder":"array","categoryarray":["-1.25","-1.00","-0.75","-0.50","-0.25"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(255,255,255,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"x","title":{"text":"yhat","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"shapes":[{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0,"x1":1,"y0":0,"y1":1}],"showlegend":false,"legend":{"bgcolor":"rgba(255,255,255,1)","bordercolor":"transparent","borderwidth":1.88976377952756,"font":{"color":"rgba(0,0,0,1)","family":"","size":11.689497716895}},"hovermode":"closest","barmode":"relative"},"config":{"doubleClick":"reset","showSendToCloud":false},"source":"A","attrs":{"42ac170fd8d":{"x":{},"y":{},"type":"scatter"}},"cur_data":"42ac170fd8d","visdat":{"42ac170fd8d":["function (y) ","x"]},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+<pre class="r"><code>pdply(&quot;BALANCE&quot;)</code></pre>
+<pre><code>## Warning: Use of `object[[1L]]` is discouraged. Use
+## `.data[[1L]]` instead.
+
+## Warning: Use of `object[[&quot;yhat&quot;]]` is discouraged. Use
+## `.data[[&quot;yhat&quot;]]` instead.</code></pre>
+<div id="htmlwidget-09042b17d8a278c3e402" style="width:672px;height:480px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="htmlwidget-09042b17d8a278c3e402">{"x":{"data":[{"x":[0,5017.9618,10035.9236,15053.8854,20071.8472,25089.809,30107.7708,35125.7326,40143.6944,45161.6562,50179.618,55197.5798,60215.5416,65233.5034,70251.4652,75269.427,80287.3888,85305.3506,90323.3124,95341.2742,100359.236,105377.1978,110395.1596,115413.1214,120431.0832,125449.045,130467.0068,135484.9686,140502.9304,145520.8922,150538.854,155556.8158,160574.7776,165592.7394,170610.7012,175628.663,180646.6248,185664.5866,190682.5484,195700.5102,200718.472,205736.4338,210754.3956,215772.3574,220790.3192,225808.281,230826.2428,235844.2046,240862.1664,245880.1282,250898.09],"y":[-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.860826904957435,-0.879310293751171,-0.879310293751171,-0.879310293751171,-0.879310293751171,-0.879310293751171,-0.879310293751171,-0.825065355677783,-0.776885131412347,-0.712166660694158,-0.593108779007005,-0.311657970797641,-0.311657970797641,-0.311657970797641,-0.311657970797641,-0.311657970797641,-0.311657970797641,-0.311657970797641,-0.311657970797641,-0.311657970797641,-0.311657970797641,-0.311657970797641,-0.311657970797641],"text":["object[[1L]]:      0.000<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:   5017.962<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  10035.924<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  15053.885<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  20071.847<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  25089.809<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  30107.771<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  35125.733<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  40143.694<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  45161.656<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  50179.618<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  55197.580<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  60215.542<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  65233.503<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  70251.465<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  75269.427<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  80287.389<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  85305.351<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  90323.312<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]:  95341.274<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]: 100359.236<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]: 105377.198<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]: 110395.160<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]: 115413.121<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]: 120431.083<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]: 125449.045<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]: 130467.007<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]: 135484.969<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]: 140502.930<br />object[[\"yhat\"]]: -0.8608269","object[[1L]]: 145520.892<br />object[[\"yhat\"]]: -0.8793103","object[[1L]]: 150538.854<br />object[[\"yhat\"]]: -0.8793103","object[[1L]]: 155556.816<br />object[[\"yhat\"]]: -0.8793103","object[[1L]]: 160574.778<br />object[[\"yhat\"]]: -0.8793103","object[[1L]]: 165592.739<br />object[[\"yhat\"]]: -0.8793103","object[[1L]]: 170610.701<br />object[[\"yhat\"]]: -0.8793103","object[[1L]]: 175628.663<br />object[[\"yhat\"]]: -0.8250654","object[[1L]]: 180646.625<br />object[[\"yhat\"]]: -0.7768851","object[[1L]]: 185664.587<br />object[[\"yhat\"]]: -0.7121667","object[[1L]]: 190682.548<br />object[[\"yhat\"]]: -0.5931088","object[[1L]]: 195700.510<br />object[[\"yhat\"]]: -0.3116580","object[[1L]]: 200718.472<br />object[[\"yhat\"]]: -0.3116580","object[[1L]]: 205736.434<br />object[[\"yhat\"]]: -0.3116580","object[[1L]]: 210754.396<br />object[[\"yhat\"]]: -0.3116580","object[[1L]]: 215772.357<br />object[[\"yhat\"]]: -0.3116580","object[[1L]]: 220790.319<br />object[[\"yhat\"]]: -0.3116580","object[[1L]]: 225808.281<br />object[[\"yhat\"]]: -0.3116580","object[[1L]]: 230826.243<br />object[[\"yhat\"]]: -0.3116580","object[[1L]]: 235844.205<br />object[[\"yhat\"]]: -0.3116580","object[[1L]]: 240862.166<br />object[[\"yhat\"]]: -0.3116580","object[[1L]]: 245880.128<br />object[[\"yhat\"]]: -0.3116580","object[[1L]]: 250898.090<br />object[[\"yhat\"]]: -0.3116580"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(0,0,0,1)","dash":"solid"},"hoveron":"points","showlegend":false,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null}],"layout":{"margin":{"t":26.2283105022831,"r":7.30593607305936,"b":40.1826484018265,"l":48.9497716894977},"plot_bgcolor":"rgba(235,235,235,1)","paper_bgcolor":"rgba(255,255,255,1)","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187},"xaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[-12544.9045,263442.9945],"tickmode":"array","ticktext":["0","50000","100000","150000","200000","250000"],"tickvals":[0,50000,100000,150000,200000,250000],"categoryorder":"array","categoryarray":["0","50000","100000","150000","200000","250000"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(255,255,255,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"y","title":{"text":"BALANCE","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"yaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[-0.907692909898848,-0.283275354649965],"tickmode":"array","ticktext":["-0.9","-0.8","-0.7","-0.6","-0.5","-0.4","-0.3"],"tickvals":[-0.9,-0.8,-0.7,-0.6,-0.5,-0.4,-0.3],"categoryorder":"array","categoryarray":["-0.9","-0.8","-0.7","-0.6","-0.5","-0.4","-0.3"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(255,255,255,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"x","title":{"text":"yhat","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"shapes":[{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0,"x1":1,"y0":0,"y1":1}],"showlegend":false,"legend":{"bgcolor":"rgba(255,255,255,1)","bordercolor":"transparent","borderwidth":1.88976377952756,"font":{"color":"rgba(0,0,0,1)","family":"","size":11.689497716895}},"hovermode":"closest","barmode":"relative"},"config":{"doubleClick":"reset","showSendToCloud":false},"source":"A","attrs":{"42ac334c748b":{"x":{},"y":{},"type":"scatter"}},"cur_data":"42ac334c748b","visdat":{"42ac334c748b":["function (y) ","x"]},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+<pre class="r"><code>pdply(&quot;SALAIRE&quot;)</code></pre>
+<pre><code>## Warning: Use of `object[[1L]]` is discouraged. Use
+## `.data[[1L]]` instead.
+
+## Warning: Use of `object[[&quot;yhat&quot;]]` is discouraged. Use
+## `.data[[&quot;yhat&quot;]]` instead.</code></pre>
+<div id="htmlwidget-15add1a7040b68462fb7" style="width:672px;height:480px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="htmlwidget-15add1a7040b68462fb7">{"x":{"data":[{"x":[11.58,4011.198,8010.816,12010.434,16010.052,20009.67,24009.288,28008.906,32008.524,36008.142,40007.76,44007.378,48006.996,52006.614,56006.232,60005.85,64005.468,68005.086,72004.704,76004.322,80003.94,84003.558,88003.176,92002.794,96002.412,100002.03,104001.648,108001.266,112000.884,116000.502,120000.12,123999.738,127999.356,131998.974,135998.592,139998.21,143997.828,147997.446,151997.064,155996.682,159996.3,163995.918,167995.536,171995.154,175994.772,179994.39,183994.008,187993.626,191993.244,195992.862,199992.48],"y":[-0.975274724536881,-0.95449269196782,-0.892692543256652,-0.892692543256652,-0.876330493395944,-0.876330493395944,-0.876330493395944,-0.876330493395944,-0.876330493395944,-0.876330493395944,-0.876330493395944,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.865416711346639,-0.849433423958422,-0.849433423958422,-0.849433423958422,-0.849433423958422,-0.849433423958422,-0.849433423958422,-0.849433423958422,-0.840686385081894,-0.840686385081894,-0.840686385081894,-0.840686385081894,-0.840686385081894,-0.840686385081894,-0.840686385081894,-0.840686385081894,-0.840686385081894,-0.827826029976417,-0.827826029976417,-0.827826029976417,-0.827826029976417,-0.827826029976417,-0.827826029976417,-0.827826029976417,-0.827826029976417],"text":["object[[1L]]:     11.580<br />object[[\"yhat\"]]: -0.9752747","object[[1L]]:   4011.198<br />object[[\"yhat\"]]: -0.9544927","object[[1L]]:   8010.816<br />object[[\"yhat\"]]: -0.8926925","object[[1L]]:  12010.434<br />object[[\"yhat\"]]: -0.8926925","object[[1L]]:  16010.052<br />object[[\"yhat\"]]: -0.8763305","object[[1L]]:  20009.670<br />object[[\"yhat\"]]: -0.8763305","object[[1L]]:  24009.288<br />object[[\"yhat\"]]: -0.8763305","object[[1L]]:  28008.906<br />object[[\"yhat\"]]: -0.8763305","object[[1L]]:  32008.524<br />object[[\"yhat\"]]: -0.8763305","object[[1L]]:  36008.142<br />object[[\"yhat\"]]: -0.8763305","object[[1L]]:  40007.760<br />object[[\"yhat\"]]: -0.8763305","object[[1L]]:  44007.378<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  48006.996<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  52006.614<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  56006.232<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  60005.850<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  64005.468<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  68005.086<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  72004.704<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  76004.322<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  80003.940<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  84003.558<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  88003.176<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  92002.794<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]:  96002.412<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]: 100002.030<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]: 104001.648<br />object[[\"yhat\"]]: -0.8654167","object[[1L]]: 108001.266<br />object[[\"yhat\"]]: -0.8494334","object[[1L]]: 112000.884<br />object[[\"yhat\"]]: -0.8494334","object[[1L]]: 116000.502<br />object[[\"yhat\"]]: -0.8494334","object[[1L]]: 120000.120<br />object[[\"yhat\"]]: -0.8494334","object[[1L]]: 123999.738<br />object[[\"yhat\"]]: -0.8494334","object[[1L]]: 127999.356<br />object[[\"yhat\"]]: -0.8494334","object[[1L]]: 131998.974<br />object[[\"yhat\"]]: -0.8494334","object[[1L]]: 135998.592<br />object[[\"yhat\"]]: -0.8406864","object[[1L]]: 139998.210<br />object[[\"yhat\"]]: -0.8406864","object[[1L]]: 143997.828<br />object[[\"yhat\"]]: -0.8406864","object[[1L]]: 147997.446<br />object[[\"yhat\"]]: -0.8406864","object[[1L]]: 151997.064<br />object[[\"yhat\"]]: -0.8406864","object[[1L]]: 155996.682<br />object[[\"yhat\"]]: -0.8406864","object[[1L]]: 159996.300<br />object[[\"yhat\"]]: -0.8406864","object[[1L]]: 163995.918<br />object[[\"yhat\"]]: -0.8406864","object[[1L]]: 167995.536<br />object[[\"yhat\"]]: -0.8406864","object[[1L]]: 171995.154<br />object[[\"yhat\"]]: -0.8278260","object[[1L]]: 175994.772<br />object[[\"yhat\"]]: -0.8278260","object[[1L]]: 179994.390<br />object[[\"yhat\"]]: -0.8278260","object[[1L]]: 183994.008<br />object[[\"yhat\"]]: -0.8278260","object[[1L]]: 187993.626<br />object[[\"yhat\"]]: -0.8278260","object[[1L]]: 191993.244<br />object[[\"yhat\"]]: -0.8278260","object[[1L]]: 195992.862<br />object[[\"yhat\"]]: -0.8278260","object[[1L]]: 199992.480<br />object[[\"yhat\"]]: -0.8278260"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(0,0,0,1)","dash":"solid"},"hoveron":"points","showlegend":false,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null}],"layout":{"margin":{"t":26.2283105022831,"r":7.30593607305936,"b":40.1826484018265,"l":54.7945205479452},"plot_bgcolor":"rgba(235,235,235,1)","paper_bgcolor":"rgba(255,255,255,1)","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187},"xaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[-9987.465,209991.525],"tickmode":"array","ticktext":["0","50000","100000","150000","200000"],"tickvals":[0,50000,100000,150000,200000],"categoryorder":"array","categoryarray":["0","50000","100000","150000","200000"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(255,255,255,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"y","title":{"text":"SALAIRE","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"yaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[-0.982647159264904,-0.820453595248394],"tickmode":"array","ticktext":["-0.95","-0.90","-0.85"],"tickvals":[-0.95,-0.9,-0.85],"categoryorder":"array","categoryarray":["-0.95","-0.90","-0.85"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(255,255,255,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"x","title":{"text":"yhat","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"shapes":[{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0,"x1":1,"y0":0,"y1":1}],"showlegend":false,"legend":{"bgcolor":"rgba(255,255,255,1)","bordercolor":"transparent","borderwidth":1.88976377952756,"font":{"color":"rgba(0,0,0,1)","family":"","size":11.689497716895}},"hovermode":"closest","barmode":"relative"},"config":{"doubleClick":"reset","showSendToCloud":false},"source":"A","attrs":{"42ac40c033a2":{"x":{},"y":{},"type":"scatter"}},"cur_data":"42ac40c033a2","visdat":{"42ac40c033a2":["function (y) ","x"]},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+<pre class="r"><code>pdply(&quot;SCORE_CREDIT&quot;)</code></pre>
+<pre><code>## Warning: Use of `object[[1L]]` is discouraged. Use
+## `.data[[1L]]` instead.
+
+## Warning: Use of `object[[&quot;yhat&quot;]]` is discouraged. Use
+## `.data[[&quot;yhat&quot;]]` instead.</code></pre>
+<div id="htmlwidget-688c35a7642b37ab01cf" style="width:672px;height:480px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="htmlwidget-688c35a7642b37ab01cf">{"x":{"data":[{"x":[350,360,370,380,390,400,410,420,430,440,450,460,470,480,490,500,510,520,530,540,550,560,570,580,590,600,610,620,630,640,650,660,670,680,690,700,710,720,730,740,750,760,770,780,790,800,810,820,830,840,850],"y":[-0.409390651352191,-0.409390651352191,-0.409390651352191,-0.409390651352191,-0.409390651352191,-0.409390651352191,-0.409390651352191,-0.477349130376778,-0.797835110043761,-0.797835110043761,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.851503670579177,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882,-0.869480485698882],"text":["object[[1L]]: 350<br />object[[\"yhat\"]]: -0.4093907","object[[1L]]: 360<br />object[[\"yhat\"]]: -0.4093907","object[[1L]]: 370<br />object[[\"yhat\"]]: -0.4093907","object[[1L]]: 380<br />object[[\"yhat\"]]: -0.4093907","object[[1L]]: 390<br />object[[\"yhat\"]]: -0.4093907","object[[1L]]: 400<br />object[[\"yhat\"]]: -0.4093907","object[[1L]]: 410<br />object[[\"yhat\"]]: -0.4093907","object[[1L]]: 420<br />object[[\"yhat\"]]: -0.4773491","object[[1L]]: 430<br />object[[\"yhat\"]]: -0.7978351","object[[1L]]: 440<br />object[[\"yhat\"]]: -0.7978351","object[[1L]]: 450<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 460<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 470<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 480<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 490<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 500<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 510<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 520<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 530<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 540<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 550<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 560<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 570<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 580<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 590<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 600<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 610<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 620<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 630<br />object[[\"yhat\"]]: -0.8515037","object[[1L]]: 640<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 650<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 660<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 670<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 680<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 690<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 700<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 710<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 720<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 730<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 740<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 750<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 760<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 770<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 780<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 790<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 800<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 810<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 820<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 830<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 840<br />object[[\"yhat\"]]: -0.8694805","object[[1L]]: 850<br />object[[\"yhat\"]]: -0.8694805"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(0,0,0,1)","dash":"solid"},"hoveron":"points","showlegend":false,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null}],"layout":{"margin":{"t":26.2283105022831,"r":7.30593607305936,"b":40.1826484018265,"l":48.9497716894977},"plot_bgcolor":"rgba(235,235,235,1)","paper_bgcolor":"rgba(255,255,255,1)","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187},"xaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[325,875],"tickmode":"array","ticktext":["400","500","600","700","800"],"tickvals":[400,500,600,700,800],"categoryorder":"array","categoryarray":["400","500","600","700","800"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(255,255,255,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"y","title":{"text":"SCORE_CREDIT","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"yaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[-0.892484977416217,-0.386386159634857],"tickmode":"array","ticktext":["-0.8","-0.7","-0.6","-0.5","-0.4"],"tickvals":[-0.8,-0.7,-0.6,-0.5,-0.4],"categoryorder":"array","categoryarray":["-0.8","-0.7","-0.6","-0.5","-0.4"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(255,255,255,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"x","title":{"text":"yhat","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"shapes":[{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0,"x1":1,"y0":0,"y1":1}],"showlegend":false,"legend":{"bgcolor":"rgba(255,255,255,1)","bordercolor":"transparent","borderwidth":1.88976377952756,"font":{"color":"rgba(0,0,0,1)","family":"","size":11.689497716895}},"hovermode":"closest","barmode":"relative"},"config":{"doubleClick":"reset","showSendToCloud":false},"source":"A","attrs":{"42acab0daa":{"x":{},"y":{},"type":"scatter"}},"cur_data":"42acab0daa","visdat":{"42acab0daa":["function (y) ","x"]},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+<pre class="r"><code>pdply(&quot;age_produit&quot;)</code></pre>
+<pre><code>## Warning: Use of `object[[1L]]` is discouraged. Use
+## `.data[[1L]]` instead.
+
+## Warning: Use of `object[[&quot;yhat&quot;]]` is discouraged. Use
+## `.data[[&quot;yhat&quot;]]` instead.</code></pre>
+<div id="htmlwidget-9dc65fa0516cea668f4e" style="width:672px;height:480px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="htmlwidget-9dc65fa0516cea668f4e">{"x":{"data":[{"x":[289,365.08,441.16,517.24,593.32,669.4,745.48,821.56,897.64,973.72,1049.8,1125.88,1201.96,1278.04,1354.12,1430.2,1506.28,1582.36,1658.44,1734.52,1810.6,1886.68,1962.76,2038.84,2114.92,2191,2267.08,2343.16,2419.24,2495.32,2571.4,2647.48,2723.56,2799.64,2875.72,2951.8,3027.88,3103.96,3180.04,3256.12,3332.2,3408.28,3484.36,3560.44,3636.52,3712.6,3788.68,3864.76,3940.84,4016.92,4093],"y":[-0.805215280143294,-0.805215280143294,-0.805215280143294,-0.805215280143294,-0.805215280143294,-0.805215280143294,-0.840127066175843,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393,-0.863043045990393],"text":["object[[1L]]:  289.00<br />object[[\"yhat\"]]: -0.8052153","object[[1L]]:  365.08<br />object[[\"yhat\"]]: -0.8052153","object[[1L]]:  441.16<br />object[[\"yhat\"]]: -0.8052153","object[[1L]]:  517.24<br />object[[\"yhat\"]]: -0.8052153","object[[1L]]:  593.32<br />object[[\"yhat\"]]: -0.8052153","object[[1L]]:  669.40<br />object[[\"yhat\"]]: -0.8052153","object[[1L]]:  745.48<br />object[[\"yhat\"]]: -0.8401271","object[[1L]]:  821.56<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]:  897.64<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]:  973.72<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1049.80<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1125.88<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1201.96<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1278.04<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1354.12<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1430.20<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1506.28<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1582.36<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1658.44<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1734.52<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1810.60<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1886.68<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 1962.76<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2038.84<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2114.92<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2191.00<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2267.08<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2343.16<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2419.24<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2495.32<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2571.40<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2647.48<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2723.56<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2799.64<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2875.72<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 2951.80<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3027.88<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3103.96<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3180.04<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3256.12<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3332.20<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3408.28<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3484.36<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3560.44<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3636.52<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3712.60<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3788.68<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3864.76<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 3940.84<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 4016.92<br />object[[\"yhat\"]]: -0.8630430","object[[1L]]: 4093.00<br />object[[\"yhat\"]]: -0.8630430"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(0,0,0,1)","dash":"solid"},"hoveron":"points","showlegend":false,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null}],"layout":{"margin":{"t":26.2283105022831,"r":7.30593607305936,"b":40.1826484018265,"l":54.7945205479452},"plot_bgcolor":"rgba(235,235,235,1)","paper_bgcolor":"rgba(255,255,255,1)","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187},"xaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[98.8,4283.2],"tickmode":"array","ticktext":["1000","2000","3000","4000"],"tickvals":[1000,2000,3000,4000],"categoryorder":"array","categoryarray":["1000","2000","3000","4000"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(255,255,255,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"y","title":{"text":"age_produit","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"yaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[-0.865934434282748,-0.802323891850939],"tickmode":"array","ticktext":["-0.86","-0.84","-0.82"],"tickvals":[-0.86,-0.84,-0.82],"categoryorder":"array","categoryarray":["-0.86","-0.84","-0.82"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(255,255,255,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"x","title":{"text":"yhat","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"shapes":[{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","x0":0,"x1":1,"y0":0,"y1":1}],"showlegend":false,"legend":{"bgcolor":"rgba(255,255,255,1)","bordercolor":"transparent","borderwidth":1.88976377952756,"font":{"color":"rgba(0,0,0,1)","family":"","size":11.689497716895}},"hovermode":"closest","barmode":"relative"},"config":{"doubleClick":"reset","showSendToCloud":false},"source":"A","attrs":{"42ac54d72100":{"x":{},"y":{},"type":"scatter"}},"cur_data":"42ac54d72100","visdat":{"42ac54d72100":["function (y) ","x"]},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+<div id="variables-catégorielles-ou-binaires" class="section level3">
+<h3>Variables catégorielles ou binaires</h3>
+<pre class="r"><code>plot.gbm(model,&quot;PAYS&quot;)</code></pre>
+<p><img src="churn_gbm_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<pre class="r"><code>plot.gbm(model,&quot;SEXE&quot;)</code></pre>
+<p><img src="churn_gbm_files/figure-html/unnamed-chunk-14-2.png" width="672" /></p>
+<pre class="r"><code>plot.gbm(model,&quot;MEMBRE_ACTIF&quot;)</code></pre>
+<p><img src="churn_gbm_files/figure-html/unnamed-chunk-14-3.png" width="672" /></p>
+<pre class="r"><code>plot.gbm(model,&quot;NB_PRODUITS&quot;)</code></pre>
+<p><img src="churn_gbm_files/figure-html/unnamed-chunk-14-4.png" width="672" /></p>
+<pre class="r"><code>plot.gbm(model,&quot;CARTE_CREDIT&quot;)</code></pre>
+<p><img src="churn_gbm_files/figure-html/unnamed-chunk-14-5.png" width="672" /></p>
+</div>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>On arrive assez facilement à une AUC-ROC de 84%, en augmentant la profondeur on peut arriver à 86% mais on risque du sur-apprentissage et des modèles plus difficiles à interpréter.</p>
+<p>On comprend assez bien pourquoi un modèle linéaire a du mal à bien prédire, l’effet marginal de l’âge sur le churn a une forme très lissée de parabole concave. L’ajout des variables age^2 et age^3 peut aider mais ne permet pas d’atteindre les mêmes perfs.</p>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

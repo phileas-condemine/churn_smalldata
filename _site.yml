@@ -1,5 +1,5 @@
 name: churn_with_gbm
-output_dir: _site
+output_dir: docs
 exclude: ["*.csv"]
 navbar:
   title: "Basic use of Gradient Boosting on a small sample of Bank Churn Data"
