@@ -1,0 +1,29 @@
+---
+title: "Bienvenue"
+author: "Philéas Condemine"
+date: "17/03/2021"
+output: html_document
+---
+
+# Bienvenue !
+
+Ce site contient une ébauche de modélisation de l'attrition sur des données bancaires très basiques.
+
+Les données contiennent 9950 observations. Chacune est associée à un unique client.
+
+Les informations disponibles, outre le fait que le client ait résilié ou non son contrat, sont les suivantes : 
+
+- salaire
+- age
+- sexe
+- pays d'origine
+- balance
+- nombre de produits
+- carte de crédit
+- score de crédit
+- date de souscription
+- membre en activité ou non
+
+Les données ne sont pas publiques mais vous pouvez voir les résultats de quelques expériences avec le package R gbm.
+
+Ces quelques expériences ont été réalisées en 2h chrono (création du site github pages comprise)

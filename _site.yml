@@ -4,8 +4,10 @@ exclude: ["*.csv"]
 navbar:
   title: "Basic use of Gradient Boosting on a small sample of Bank Churn Data"
   left:
-    - text: "Home"
+    - text: "Accueil"
       href: index.html
+    - text: "Analyse"
+      href: churn_gbm.html
 output:
   html_document:
     toc: true

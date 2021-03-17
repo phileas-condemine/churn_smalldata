@@ -2,7 +2,10 @@
 title: "Modélisation du Churn sur un petit échantillon par Gradient Boosting"
 author: "Philéas Condemine"
 date: "17/03/2021"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
