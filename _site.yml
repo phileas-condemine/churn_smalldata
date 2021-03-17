@@ -1,0 +1,12 @@
+name: churn_with_gbm
+output_dir: _site
+exclude: ["*.csv"]
+navbar:
+  title: "Basic use of Gradient Boosting on a small sample of Bank Churn Data"
+  left:
+    - text: "Home"
+      href: index.html
+output:
+  html_document:
+    toc: true
+    highlight: textmate
